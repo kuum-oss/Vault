@@ -14,3 +14,5 @@ spring.cloud.gateway.routes:
     uri: http://localhost:8084
     predicates: [Path=/reports/**]
 management.endpoints.web.exposure.include: health,info,prometheus
+vault.security.rsa-private-pem: ${VAULT_RSA_PRIVATE_PEM:}
+vault.security.rsa-public-pem: ${VAULT_RSA_PUBLIC_PEM:}

@@ -1,4 +1,14 @@
 server.port: 8082
 spring.application.name: vault-accounts
 spring.threads.virtual.enabled: true
+spring.datasource.url: ${VAULT_JDBC_URL:jdbc:postgresql://localhost:5432/vault}
+spring.datasource.username: ${VAULT_DB_USER:vault}
+spring.datasource.password: ${VAULT_DB_PASSWORD:vault}
+spring.liquibase.change-log: classpath:/db/changelog/master.yaml
+spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+spring.kafka.consumer.group-id: vault-accounts
+spring.kafka.consumer.properties.spring.json.trusted.packages: com.vault.domain
+spring.kafka.consumer.value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+spring.kafka.producer.key-serializer: org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer: org.apache.kafka.common.serialization.StringSerializer
 management.endpoints.web.exposure.include: health,info,prometheus

@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: transfers-001-transfers
+      author: vault
+      changes:
+        - createTable:
+            tableName: transfers
+            columns:
+              - column: { name: transfer_id, type: UUID, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: from_account_id, type: UUID, constraints: { nullable: false } }
+              - column: { name: to_account_id, type: UUID, constraints: { nullable: false } }
+              - column: { name: amount, type: DECIMAL(19,4), constraints: { nullable: false } }
+              - column: { name: currency, type: VARCHAR(3), constraints: { nullable: false } }
+              - column: { name: state, type: VARCHAR(16), constraints: { nullable: false } }
+              - column: { name: attempts, type: INT, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: created_at, type: TIMESTAMP WITH TIME ZONE, defaultValueComputed: CURRENT_TIMESTAMP }
+  - changeSet:
+      id: transfers-002-outbox
+      author: vault
+      changes:
+        - createTable:
+            tableName: outbox_events
+            columns:
+              - column: { name: id, type: UUID, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: aggregate_id, type: UUID, constraints: { nullable: false } }
+              - column: { name: topic, type: VARCHAR(200), constraints: { nullable: false } }
+              - column: { name: message_key, type: VARCHAR(200), constraints: { nullable: false } }
+              - column: { name: event_type, type: VARCHAR(200), constraints: { nullable: false } }
+              - column: { name: payload, type: JSONB, constraints: { nullable: false } }
+              - column: { name: status, type: VARCHAR(16), defaultValue: NEW, constraints: { nullable: false } }
+              - column: { name: attempts, type: INT, defaultValueNumeric: 0, constraints: { nullable: false } }
+              - column: { name: available_at, type: TIMESTAMP WITH TIME ZONE, defaultValueComputed: CURRENT_TIMESTAMP }
+              - column: { name: created_at, type: TIMESTAMP WITH TIME ZONE, defaultValueComputed: CURRENT_TIMESTAMP }
+              - column: { name: published_at, type: TIMESTAMP WITH TIME ZONE }
+        - createIndex:
+            tableName: outbox_events
+            indexName: outbox_pending_idx
+            columns:
+              - column: { name: status }
+              - column: { name: available_at }

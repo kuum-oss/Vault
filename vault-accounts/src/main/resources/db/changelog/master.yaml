@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: accounts-001-accounts-and-audit
+      author: vault
+      changes:
+        - createTable:
+            tableName: accounts
+            columns:
+              - column: { name: account_id, type: UUID, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: owner_id, type: UUID, constraints: { nullable: false } }
+              - column: { name: currency, type: VARCHAR(3), constraints: { nullable: false } }
+              - column: { name: balance, type: DECIMAL(19,4), constraints: { nullable: false } }
+              - column: { name: status, type: VARCHAR(16), constraints: { nullable: false } }
+        - createTable:
+            tableName: audit_log
+            columns:
+              - column: { name: event_id, type: UUID, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: entity_type, type: VARCHAR(64), constraints: { nullable: false } }
+              - column: { name: entity_id, type: UUID, constraints: { nullable: false } }
+              - column: { name: action, type: VARCHAR(64), constraints: { nullable: false } }
+              - column: { name: actor_id, type: UUID }
+              - column: { name: payload, type: JSONB }
+              - column: { name: timestamp, type: TIMESTAMP WITH TIME ZONE, defaultValueComputed: CURRENT_TIMESTAMP }
