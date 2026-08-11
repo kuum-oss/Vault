@@ -27,7 +27,7 @@ Solid links are implemented application behaviour. Dashed links are schema/confi
 1. Client calls gateway.
 2. `/auth/**` routes directly to auth. Other routes require a `Bearer` JWE when gateway RSA keys are configured.
 3. Gateway decrypts JWE, verifies the inner JWS and expiration, removes `Authorization`, then passes `X-User-Id` and `X-User-Role` downstream.
-4. Auth registers a demo user, verifies a TOTP code and returns an opaque token. Users are presently process-local.
+4. Auth persists a BCrypt password hash and a Vault Transit envelope-encrypted TOTP seed, verifies a TOTP code and returns an opaque token.
 5. Transfers creates a `DRAFT`; submitting it transitions it to `INITIATED` and emits `vault.transfer.initiated`.
 6. Accounts deduplicates the received event in memory and emits `vault.transfer.reserved`. Balance reservation is intentionally not implemented until persistent atomic updates are in place.
 
@@ -50,8 +50,8 @@ The pure `Transfer.transition` method currently enforces this model. Spring Stat
 
 | Service | Owns | Current storage | Target storage |
 | --- | --- | --- | --- |
-| auth | identities, password hash, encrypted TOTP secret | process memory | PostgreSQL + R2DBC |
-| accounts | accounts, balance, account audit | process memory | PostgreSQL + R2DBC |
+| auth | identities, password hash, encrypted TOTP secret | PostgreSQL + R2DBC | PostgreSQL + R2DBC |
+| accounts | accounts, balance, account audit | PostgreSQL + R2DBC | PostgreSQL + R2DBC |
 | transfers | transfer state, history, outbox | process memory | PostgreSQL + R2DBC |
 | reports | read model | static stub | Oracle XE read model |
 
@@ -63,7 +63,7 @@ Use R2DBC repositories and optimistic versions for transfers. Debit/reserve with
 
 ### KMS-backed TOTP encryption
 
-Use envelope encryption: a per-user AES-256-GCM DEK encrypts the TOTP secret; a cloud KMS or Vault Transit encrypts that DEK. Store ciphertext, nonce, encrypted DEK and key version. Production must fail closed when KMS is unavailable.
+Use envelope encryption: a per-user AES-256-GCM DEK encrypts the TOTP secret; HashiCorp Vault Transit encrypts that DEK. Store ciphertext, nonce, encrypted DEK and key version. The local Compose stack runs Vault in dev mode; production must use managed Vault (or a separately approved cloud KMS) and fail closed when KMS is unavailable.
 
 ### Transactional outbox and inbox
 

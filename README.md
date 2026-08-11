@@ -22,8 +22,8 @@ Vault — учебный fintech-проект на Java 25. Репозитори
 | Module | Port | Responsibility | Current state |
 | --- | ---: | --- | --- |
 | `vault-gateway` | 8080 | Routes, JWE/JWS validation, identity headers | Implemented; Redis rate limiting is not wired yet. |
-| `vault-auth` | 8081 | Registration, login, TOTP and opaque access token | Implemented for local demo; users are in memory. |
-| `vault-accounts` | 8082 | Open/list/freeze accounts, initiated-transfer consumer | In-memory API; Liquibase/R2DBC dependencies are prepared. |
+| `vault-auth` | 8081 | Registration, login, TOTP and opaque access token | PostgreSQL/R2DBC with Vault Transit envelope encryption. |
+| `vault-accounts` | 8082 | Open/list/freeze accounts, initiated-transfer consumer | PostgreSQL/R2DBC persistence; transactional balance reservation is pending. |
 | `vault-transfers` | 8083 | Transfer draft/submit and transfer event producer | In-memory state; transition logic is implemented. |
 | `vault-reports` | 8084 | Summary/transaction report endpoints | Stub; Oracle integration is not implemented. |
 | `vault-config-server` | 8888 | Native Spring Cloud Config Server | Implemented, not required by local quick start. |
@@ -94,7 +94,7 @@ For Kubernetes, inject them from a managed secret store. The checked-in [Secret 
 
 Implemented: HTTP routes listed above, immutable `Account`/`Transfer`/`AuditLog` records, transition rules, BCrypt password hashes, TOTP verification, JWS inside JWE, gateway validation, Liquibase changelogs, Docker dependencies and one Kafka producer/consumer path.
 
-Planned: persistent R2DBC repositories, a configured Spring State Machine (the current transition engine is a pure domain method), Oracle reports, Redis rate limiting, tracing export, service registration/config client wiring, KMS encryption at rest, transactional outbox and complete Kubernetes manifests. See [architecture](docs/ARCHITECTURE.md#production-roadmap) for acceptance criteria.
+Planned: persistent transfer repository, a configured Spring State Machine (the current transition engine is a pure domain method), Oracle reports, Redis rate limiting, tracing export, service registration/config client wiring, transactional outbox and complete Kubernetes manifests. See [architecture](docs/ARCHITECTURE.md#production-roadmap) for acceptance criteria.
 
 ## Verification
 

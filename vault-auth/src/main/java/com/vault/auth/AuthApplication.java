@@ -11,24 +11,17 @@ import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import com.vault.auth.service.AuthUserService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -57,26 +50,15 @@ public class AuthApplication {
 @RequestMapping("/auth")
 class AuthController {
   private final TokenService tokens;
-  private final PasswordEncoder passwords;
-  private final ConcurrentHashMap<String, User> users = new ConcurrentHashMap<>();
-  AuthController(TokenService tokens, PasswordEncoder passwords) { this.tokens = tokens; this.passwords = passwords; }
-  @PostMapping("/register") Mono<Map<String, Object>> register(@RequestBody RegisterRequest body) {
-    UUID id = UUID.randomUUID(); String secret = TotpService.newSecret();
-    users.put(body.email(), new User(id, body.email(), passwords.encode(body.password()), secret));
-    return Mono.just(Map.of("userId", id, "totpSecret", secret, "otpauthUri", TotpService.uri(body.email(), secret)));
-  }
-  @PostMapping("/login") Mono<Map<String, Object>> login(@RequestBody LoginRequest body) {
-    User user = users.get(body.email());
-    if (user == null || !passwords.matches(body.password(), user.password())) return Mono.error(new ApiException(HttpStatus.UNAUTHORIZED, "invalid credentials"));
-    return Mono.just(Map.of("totpChallenge", true, "challengeId", user.id()));
-  }
+  private final AuthUserService users;
+  AuthController(TokenService tokens, AuthUserService users) { this.tokens = tokens; this.users = users; }
+  @PostMapping("/register") Mono<RegisterResponse> register(@RequestBody RegisterRequest body) { return users.register(body.email(), body.password()).map(result -> new RegisterResponse(result.userId(), result.totpSecret(), result.otpauthUri())); }
+  @PostMapping("/login") Mono<LoginResponse> login(@RequestBody LoginRequest body) { return users.verifyPassword(body.email(), body.password()).map(user -> new LoginResponse(true)); }
   @PostMapping("/verify-totp") Mono<TokenResponse> verify(@RequestBody TotpRequest body) throws Exception {
-    User user = users.get(body.email());
-    if (user == null || !TotpService.verify(user.totpSecret(), body.code(), Instant.now().getEpochSecond())) return Mono.error(new ApiException(HttpStatus.UNAUTHORIZED, "invalid TOTP code"));
-    return Mono.just(new TokenResponse(tokens.issue(user.id(), "CUSTOMER"), "Bearer", 900));
+    return users.verifyTotp(body.email(), body.code()).map(user -> { try { return new TokenResponse(tokens.issue(user.id(), "CUSTOMER"), "Bearer", 900); } catch (Exception e) { throw new IllegalStateException(e); } });
   }
   @PostMapping("/refresh") Mono<TokenResponse> refresh(@RequestHeader("Authorization") String auth) throws Exception { return Mono.just(new TokenResponse(tokens.refresh(auth.substring(7)), "Bearer", 900)); }
-  record RegisterRequest(String email, String password) {} record LoginRequest(String email, String password) {} record TotpRequest(String email, String code) {} record TokenResponse(String accessToken, String tokenType, int expiresIn) {} record User(UUID id, String email, String password, String totpSecret) {}
+  record RegisterRequest(String email, String password) {} record LoginRequest(String email, String password) {} record TotpRequest(String email, String code) {} record RegisterResponse(java.util.UUID userId, String totpSecret, String otpauthUri) {} record LoginResponse(boolean totpChallenge) {} record TokenResponse(String accessToken, String tokenType, int expiresIn) {}
 }
 
 @ResponseStatus(HttpStatus.UNAUTHORIZED) class ApiException extends RuntimeException { ApiException(HttpStatus ignored, String message) { super(message); } }
@@ -93,11 +75,4 @@ final class TokenService {
   String refresh(String token) throws Exception { JWEObject encrypted = JWEObject.parse(token); encrypted.decrypt(new RSADecrypter(privateKey)); SignedJWT signed = encrypted.getPayload().toSignedJWT(); if (signed == null) throw new IllegalArgumentException("invalid token"); return issue(UUID.fromString(signed.getJWTClaimsSet().getSubject()), signed.getJWTClaimsSet().getStringClaim("role")); }
   static TokenService fromPem(String privatePem, String publicPem) throws Exception { KeyFactory factory = KeyFactory.getInstance("RSA"); return new TokenService((RSAPrivateKey) factory.generatePrivate(new PKCS8EncodedKeySpec(decode(privatePem))), (RSAPublicKey) factory.generatePublic(new X509EncodedKeySpec(decode(publicPem)))); }
   private static byte[] decode(String pem) { return Base64.getDecoder().decode(pem.replaceAll("-----BEGIN [^-]+-----|-----END [^-]+-----|\\s", "")); }
-}
-
-final class TotpService {
-  private TotpService() {} static String newSecret() { byte[] bytes = new byte[20]; new java.security.SecureRandom().nextBytes(bytes); return Base64.getEncoder().withoutPadding().encodeToString(bytes); }
-  static String uri(String email, String secret) { return "otpauth://totp/Vault:" + email + "?secret=" + secret + "&issuer=Vault&algorithm=SHA1&digits=6&period=30"; }
-  static boolean verify(String secret, String code, long epochSeconds) { for (long offset = -1; offset <= 1; offset++) if (code.equals(code(secret, (epochSeconds / 30) + offset))) return true; return false; }
-  private static String code(String secret, long counter) { try { byte[] msg = java.nio.ByteBuffer.allocate(8).putLong(counter).array(); Mac mac = Mac.getInstance("HmacSHA1", new BouncyCastleProvider()); mac.init(new SecretKeySpec(Base64.getDecoder().decode(secret), "HmacSHA1")); byte[] hash = mac.doFinal(msg); int offset = hash[hash.length - 1] & 0xf; int value = ((hash[offset] & 0x7f) << 24 | (hash[offset + 1] & 0xff) << 16 | (hash[offset + 2] & 0xff) << 8 | (hash[offset + 3] & 0xff)) % 1_000_000; return "%06d".formatted(value); } catch (Exception e) { throw new IllegalStateException(e); } }
 }

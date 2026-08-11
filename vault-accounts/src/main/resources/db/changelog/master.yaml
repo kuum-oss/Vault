@@ -21,3 +21,13 @@ databaseChangeLog:
               - column: { name: actor_id, type: UUID }
               - column: { name: payload, type: JSONB }
               - column: { name: timestamp, type: TIMESTAMP WITH TIME ZONE, defaultValueComputed: CURRENT_TIMESTAMP }
+  - changeSet:
+      id: accounts-002-inbox
+      author: vault
+      changes:
+        - createTable:
+            tableName: inbox_events
+            columns:
+              - column: { name: event_id, type: UUID, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: topic, type: VARCHAR(200), constraints: { nullable: false } }
+              - column: { name: received_at, type: TIMESTAMP WITH TIME ZONE, defaultValueComputed: CURRENT_TIMESTAMP }

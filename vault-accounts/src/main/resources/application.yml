@@ -4,6 +4,9 @@ spring.threads.virtual.enabled: true
 spring.datasource.url: ${VAULT_JDBC_URL:jdbc:postgresql://localhost:5432/vault}
 spring.datasource.username: ${VAULT_DB_USER:vault}
 spring.datasource.password: ${VAULT_DB_PASSWORD:vault}
+spring.r2dbc.url: ${VAULT_R2DBC_URL:r2dbc:postgresql://localhost:5432/vault}
+spring.r2dbc.username: ${VAULT_DB_USER:vault}
+spring.r2dbc.password: ${VAULT_DB_PASSWORD:vault}
 spring.liquibase.change-log: classpath:/db/changelog/master.yaml
 spring.kafka.bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 spring.kafka.consumer.group-id: vault-accounts
