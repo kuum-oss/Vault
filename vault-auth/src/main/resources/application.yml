@@ -1,0 +1,6 @@
+server:
+  port: 8081
+spring:
+  application.name: vault-auth
+  threads.virtual.enabled: true
+management.endpoints.web.exposure.include: health,info,prometheus

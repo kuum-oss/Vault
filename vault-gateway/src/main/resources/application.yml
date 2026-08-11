@@ -1,0 +1,16 @@
+server.port: 8080
+spring.application.name: vault-gateway
+spring.cloud.gateway.routes:
+  - id: auth
+    uri: http://localhost:8081
+    predicates: [Path=/auth/**]
+  - id: accounts
+    uri: http://localhost:8082
+    predicates: [Path=/accounts/**]
+  - id: transfers
+    uri: http://localhost:8083
+    predicates: [Path=/transfers/**]
+  - id: reports
+    uri: http://localhost:8084
+    predicates: [Path=/reports/**]
+management.endpoints.web.exposure.include: health,info,prometheus

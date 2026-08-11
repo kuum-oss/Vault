@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>3.5.3</version><relativePath/></parent>
+  <groupId>com.vault</groupId><artifactId>vault</artifactId><version>0.1.0-SNAPSHOT</version><packaging>pom</packaging>
+  <name>Vault fintech platform</name>
+  <properties><java.version>25</java.version><spring-cloud.version>2025.0.0</spring-cloud.version><maven.compiler.release>25</maven.compiler.release></properties>
+  <modules><module>vault-domain</module><module>vault-auth</module><module>vault-accounts</module><module>vault-transfers</module><module>vault-gateway</module><module>vault-reports</module><module>vault-config-server</module><module>vault-discovery</module></modules>
+  <dependencyManagement><dependencies><dependency><groupId>org.springframework.cloud</groupId><artifactId>spring-cloud-dependencies</artifactId><version>${spring-cloud.version}</version><type>pom</type><scope>import</scope></dependency></dependencies></dependencyManagement>
+  <build><pluginManagement><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><configuration><release>25</release><parameters>true</parameters></configuration></plugin></plugins></pluginManagement></build>
+</project>

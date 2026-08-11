@@ -1,0 +1,4 @@
+server.port: 8084
+spring.application.name: vault-reports
+spring.threads.virtual.enabled: true
+management.endpoints.web.exposure.include: health,info,prometheus
