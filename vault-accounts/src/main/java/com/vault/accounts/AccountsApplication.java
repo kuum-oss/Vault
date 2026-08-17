@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono;
   @GetMapping Flux<Account> all() { return accounts.findAll().map(AccountEntity::toDomain); }
   @PostMapping Mono<Account> open(@RequestBody OpenAccount request) { Account a = new Account(UUID.randomUUID(), request.ownerId(), request.currency(), BigDecimal.ZERO, Account.Status.ACTIVE); return accounts.save(AccountEntity.from(a)).map(AccountEntity::toDomain); }
   @GetMapping("/{id}/balance") Mono<BigDecimal> balance(@PathVariable UUID id) { return accounts.findById(id).map(AccountEntity::balance).switchIfEmpty(Mono.error(new IllegalArgumentException("account not found"))); }
-  @PatchMapping("/{id}/freeze") Mono<Account> freeze(@PathVariable UUID id) { return accounts.findById(id).map(AccountEntity::toDomain).map(Account::freeze).map(AccountEntity::from).flatMap(accounts::save).map(AccountEntity::toDomain).switchIfEmpty(Mono.error(new IllegalArgumentException("account not found"))); }
+  @PatchMapping("/{id}/freeze") Mono<Account> freeze(@PathVariable UUID id) { return accounts.findById(id).map(AccountEntity::freeze).flatMap(accounts::save).map(AccountEntity::toDomain).switchIfEmpty(Mono.error(new IllegalArgumentException("account not found"))); }
   record OpenAccount(UUID ownerId, String currency) {}
 }
 
