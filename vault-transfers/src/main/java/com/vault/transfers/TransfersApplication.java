@@ -19,7 +19,7 @@ import reactor.core.publisher.Mono;
   @PostMapping Mono<Transfer> create(@RequestBody CreateTransfer r) { Transfer t = new Transfer(UUID.randomUUID(), r.fromAccountId(), r.toAccountId(), r.amount(), r.currency(), Transfer.State.DRAFT, 0); transfers.put(t.transferId(), t); return Mono.just(t); }
   @PostMapping("/{id}/submit") Mono<Transfer> submit(@PathVariable UUID id) { return apply(id, Transfer.Event.SUBMIT); }
   @GetMapping("/{id}") Mono<Transfer> get(@PathVariable UUID id) { return Mono.justOrEmpty(transfers.get(id)); }
-  private Mono<Transfer> apply(UUID id, Transfer.Event event) { Transfer t = transfers.get(id); if (t == null) return Mono.empty(); Transfer next = t.transition(event); transfers.put(id, next); publish(next); return Mono.just(next); }
+  private Mono<Transfer> apply(UUID id, Transfer.Event event) { Transfer next = transfers.computeIfPresent(id, (k, current) -> current.transition(event)); if (next == null) return Mono.empty(); publish(next); return Mono.just(next); }
   private void publish(Transfer transfer) { String topic = switch (transfer.state()) { case INITIATED -> "vault.transfer.initiated"; case SETTLED -> "vault.transfer.settled"; case FAILED -> "vault.transfer.failed"; default -> null; }; if (topic != null) kafka.send(topic, transfer.transferId().toString(), TransferEvent.of(transfer)); }
   record CreateTransfer(UUID fromAccountId, UUID toAccountId, BigDecimal amount, String currency) {}
 }
