@@ -13,8 +13,8 @@
 | 2 | 🔴 Критический | ✅ **Исправлен** | `vault-accounts` | [`AccountsApplication.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-accounts/src/main/java/com/vault/accounts/AccountsApplication.java#L20) | `save()` выполняет UPDATE вместо INSERT при создании нового счёта |
 | 3 | 🟡 Серьёзный | ✅ **Исправлен** | `vault-accounts` | [`AccountEntity.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-accounts/src/main/java/com/vault/accounts/AccountEntity.java#L10) | Entity не отображает 4 обязательных столбца схемы (`reserved`, `version`, `created_at`, `updated_at`) |
 | 4 | 🟡 Серьёзный | ✅ **Исправлен** | `vault-transfers` | [`pom.xml`](file:///Users/dimagordeev/IdeaProjects/ser/vault-transfers/pom.xml) | Отсутствует `spring-boot-starter-jdbc` — Liquibase не создаёт таблицы |
-| 5 | 🟡 Серьёзный | ⏳ Открыт | `vault-accounts` | [`AccountsApplication.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-accounts/src/main/java/com/vault/accounts/AccountsApplication.java#L29) | Дедупликация событий в памяти теряется при рестарте |
-| 6 | 🟠 Умеренный | ⏳ Открыт | `vault-gateway` | [`JweAuthenticationFilter.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-gateway/src/main/java/com/vault/gateway/JweAuthenticationFilter.java) | Фильтр аутентификации отключён по умолчанию без предупреждения |
+| 5 | 🟡 Серьёзный | ✅ **Исправлен** | `vault-accounts` | [`AccountsApplication.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-accounts/src/main/java/com/vault/accounts/AccountsApplication.java#L29) | Дедупликация событий в памяти теряется при рестарте |
+| 6 | 🟠 Умеренный | ✅ **Исправлен** | `vault-gateway` | [`JweAuthenticationFilter.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-gateway/src/main/java/com/vault/gateway/JweAuthenticationFilter.java) | Фильтр аутентификации отключён по умолчанию без предупреждения |
 | 7 | 🟠 Умеренный | ⏳ Открыт | `vault-transfers` | [`TransfersApplication.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-transfers/src/main/java/com/vault/transfers/TransfersApplication.java#L22) | Неатомарное чтение-запись в `ConcurrentHashMap` |
 
 ---
@@ -169,7 +169,7 @@ public record AccountEntity(
 
 ---
 
-## 🟡 Дефект 5 — Дедупликация событий в памяти теряется при рестарте
+## 🟡 Дефект 5 — Дедупликация событий в памяти теряется при рестарте [✅ ИСПРАВЛЕН]
 
 **Модуль**: vault-accounts  
 **Файл**: [`AccountsApplication.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-accounts/src/main/java/com/vault/accounts/AccountsApplication.java#L29-L35)
@@ -189,7 +189,7 @@ private final java.util.Set<UUID> processed = ConcurrentHashMap.newKeySet();
 
 ---
 
-## 🟠 Дефект 6 — Фильтр аутентификации отключён по умолчанию без предупреждения
+## 🟠 Дефект 6 — Фильтр аутентификации отключён по умолчанию без предупреждения [✅ ИСПРАВЛЕН]
 
 **Модуль**: vault-gateway  
 **Файл**: [`JweAuthenticationFilter.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-gateway/src/main/java/com/vault/gateway/JweAuthenticationFilter.java)
@@ -243,6 +243,6 @@ transfers.put(id, next);
 - [x] **Шаг 1.1**: Исправить маппинг первичного ключа в `AccountEntity.java` (добавить `@Column("id")` — **Дефект 1**).
 - [x] **Шаг 1.2**: Добавить `@Version` и недостающие поля (`reserved`, `version`, `created_at`, `updated_at`) в `AccountEntity.java` (**Дефекты 2, 3**).
 - [x] **Шаг 2**: Добавить `spring-boot-starter-jdbc` в `vault-transfers/pom.xml` (**Дефект 4**).
-- [ ] **Шаг 3**: Добавить логирование/fail-fast валидацию ключей в `JweAuthenticationFilter.java` (**Дефект 6**).
+- [x] **Шаг 3**: Добавить логирование/fail-fast валидацию ключей в `JweAuthenticationFilter.java` (**Дефект 6**).
 - [ ] **Шаг 4**: Применить `computeIfPresent` в `TransfersController` до подключения постоянной БД (**Дефект 7**).
-- [ ] **Шаг 5**: Реализовать персистентный Transactional Outbox/Inbox для надежной дедупликации Kafka-событий (**Дефект 5**).
+- [x] **Шаг 5**: Реализовать персистентный Transactional Outbox/Inbox для надежной дедупликации Kafka-событий (**Дефект 5**).

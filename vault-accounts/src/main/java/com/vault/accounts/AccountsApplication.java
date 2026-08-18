@@ -3,9 +3,11 @@ package com.vault.accounts;
 import com.vault.domain.Account;
 import com.vault.domain.TransferEvent;
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -25,12 +27,39 @@ import reactor.core.publisher.Mono;
 
 @org.springframework.stereotype.Component
 class TransferReservationConsumer {
+  private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(TransferReservationConsumer.class);
   private final KafkaTemplate<String, String> kafka;
-  private final java.util.Set<UUID> processed = java.util.concurrent.ConcurrentHashMap.newKeySet();
-  TransferReservationConsumer(KafkaTemplate<String, String> kafka) { this.kafka = kafka; }
+  private final AccountAuditRepository auditRepository;
+
+  TransferReservationConsumer(KafkaTemplate<String, String> kafka, AccountAuditRepository auditRepository) {
+    this.kafka = kafka;
+    this.auditRepository = auditRepository;
+  }
+
   @KafkaListener(topics = "vault.transfer.initiated", groupId = "vault-accounts")
   void reserve(TransferEvent event) {
-    if (!processed.add(event.eventId())) return;
-    kafka.send("vault.transfer.reserved", event.transferId().toString(), event.eventId().toString());
+    Boolean exists = auditRepository.existsByEventId(event.eventId()).block();
+    if (Boolean.TRUE.equals(exists)) {
+      log.debug("Event {} already processed, skipping", event.eventId());
+      return;
+    }
+
+    AccountAuditEntity audit = new AccountAuditEntity(
+        UUID.randomUUID(),
+        event.fromAccountId(),
+        "TRANSFER_RESERVED",
+        null,
+        event.amount() != null ? event.amount().negate() : null,
+        null,
+        event.eventId(),
+        OffsetDateTime.now()
+    );
+
+    try {
+      auditRepository.save(audit).block();
+      kafka.send("vault.transfer.reserved", event.transferId().toString(), event.eventId().toString());
+    } catch (DuplicateKeyException e) {
+      log.debug("Event {} already processed concurrently, skipping", event.eventId());
+    }
   }
 }

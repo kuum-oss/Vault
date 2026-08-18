@@ -37,3 +37,11 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Kubernetes & Secrets ###
+k8s/
+**/k8s/
+*secrets*.yaml
+*secrets*.yml
+vault-secrets.example.yaml
+**/vault-secrets.example.yaml
