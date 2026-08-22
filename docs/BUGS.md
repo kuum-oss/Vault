@@ -1,7 +1,14 @@
-# Vault — Аудит дефектов и руководство по исправлению
+# Vault — Аудит дефектов и отчёт о выполнении исправлений
 
-Дата: 2026-08-16  
+Дата аудита: 2026-08-16
+Дата завершения исправлений: 2026-08-19
 Ревизия: полная проверка всех модулей (`vault-accounts`, `vault-transfers`, `vault-gateway`, `vault-auth`, `vault-reports`, `vault-domain`)
+
+## Итоговый статус
+
+Все найденные в рамках аудита дефекты исправлены: **7 из 7 (100%)**. Открытых пунктов в этом аудите не осталось. Изменения затронули маппинг и сохранение счетов, миграции переводов, дедупликацию Kafka-событий, безопасность gateway и потокобезопасность обработки переводов.
+
+Проверка результата выполнена по исходному коду, Liquibase-схемам и тестам соответствующих модулей. Документ фиксирует состояние на дату завершения исправлений; новые дефекты следует добавлять отдельными пунктами с датой, статусом и описанием проверки.
 
 ---
 
@@ -16,6 +23,15 @@
 | 5 | 🟡 Серьёзный | ✅ **Исправлен** | `vault-accounts` | [`AccountsApplication.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-accounts/src/main/java/com/vault/accounts/AccountsApplication.java#L29) | Дедупликация событий в памяти теряется при рестарте |
 | 6 | 🟠 Умеренный | ✅ **Исправлен** | `vault-gateway` | [`JweAuthenticationFilter.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-gateway/src/main/java/com/vault/gateway/JweAuthenticationFilter.java) | Фильтр аутентификации отключён по умолчанию без предупреждения |
 | 7 | 🟠 Умеренный | ✅ **Исправлен** | `vault-transfers` | [`TransfersApplication.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-transfers/src/main/java/com/vault/transfers/TransfersApplication.java#L22) | Неатомарное чтение-запись в `ConcurrentHashMap` |
+
+### Результат по категориям
+
+| Категория | Исправлено | Осталось |
+|---|---:|---:|
+| Критические | 2 | 0 |
+| Серьёзные | 3 | 0 |
+| Умеренные | 2 | 0 |
+| **Всего** | **7** | **0** |
 
 ---
 
@@ -185,7 +201,7 @@ private final java.util.Set<UUID> processed = ConcurrentHashMap.newKeySet();
 Повторная отправка событий и потенциальное дублирование финансовых транзакций при рестартах.
 
 ### Исправление
-Использовать персистентный Transactional Inbox либо проверку уникальности `event_id` через таблицу `account_audit` (где уже настроен уникальный индекс `uq_account_audit_event`).
+Дедупликация перенесена из оперативного `Set` в персистентную таблицу `account_audit`. Перед обработкой выполняется проверка `event_id`, а уникальное ограничение `uq_account_audit_event` защищает от параллельной повторной обработки. При конфликте `DuplicateKeyException` событие пропускается. Поэтому состояние дедупликации сохраняется после рестарта сервиса и при перебалансировке Kafka-консьюмера.
 
 ---
 
@@ -210,6 +226,7 @@ private final java.util.Set<UUID> processed = ConcurrentHashMap.newKeySet();
 
 **Модуль**: vault-transfers  
 **Файл**: [`TransfersApplication.java`](file:///Users/dimagordeev/IdeaProjects/ser/vault-transfers/src/main/java/com/vault/transfers/TransfersApplication.java#L22)
+**Статус**: ✅ **Исправлен** (2026-08-19) — неатомарные операции `get`/`put` заменены на атомарный `computeIfPresent`.
 
 ### Суть проблемы
 ```java
@@ -246,3 +263,7 @@ transfers.put(id, next);
 - [x] **Шаг 3**: Добавить логирование/fail-fast валидацию ключей в `JweAuthenticationFilter.java` (**Дефект 6**).
 - [x] **Шаг 4**: Применить `computeIfPresent` в `TransfersController` до подключения постоянной БД (**Дефект 7**).
 - [x] **Шаг 5**: Реализовать персистентный Transactional Outbox/Inbox для надежной дедупликации Kafka-событий (**Дефект 5**).
+
+## Заключение
+
+По состоянию на **2026-08-19** все 7 дефектов из аудита закрыты. Критические проблемы устранены, обязательные поля схемы отражены в entity, миграции переводов запускаются, повторная обработка событий защищена на уровне базы данных, а небезопасный режим gateway явно обозначается в логах и ограничивается настройками окружения.
